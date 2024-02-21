@@ -1,0 +1,55 @@
+import socket
+import threading
+import struct
+
+class lnkserve:
+    host = '127.0.0.1'
+    ports = [30000, 30001, 30002]  # List of ports to listen on
+    sockets = []  # List to store socket objects
+
+    @staticmethod
+    def handle(client):
+        try:
+            while True:
+                # Receive floating point data (assuming 8 bytes for double)
+                float_data = client.recv(8)
+                if not float_data:
+                    break
+                float_value = struct.unpack('!d', float_data)[0]  # Convert bytes to double (float)
+                print("Received floating point:", float_value)
+
+                # Receive boolean data (assuming 1 byte for boolean)
+                bool_data = client.recv(1)
+                if not bool_data:
+                    break
+                bool_value = bool_data[0] != 0  # Convert bytes to boolean
+                print("Received boolean:", bool_value)
+
+        except ConnectionResetError as c:
+            print("Client has left", c)
+        except Exception as e:
+            print("Error:", e)
+        finally:
+            client.close()
+
+    @staticmethod
+    def start_server(host, port):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((host, port))
+        s.listen(5)
+        lnkserve.sockets.append(s)
+        print(f"Server listening on {host}:{port}")
+        while True:
+            client, client_address = s.accept()
+            print(f"Connection from {client_address}")
+            client_thread = threading.Thread(target=lnkserve.handle, args=(client,))
+            client_thread.start()
+
+    @staticmethod
+    def start_all_servers():
+        for port in lnkserve.ports:
+            server_thread = threading.Thread(target=lnkserve.start_server, args=(lnkserve.host, port))
+            server_thread.start()
+    
+if __name__ == "__main__":
+    lnkserve.start_all_servers()

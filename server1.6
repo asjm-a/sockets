@@ -1,0 +1,54 @@
+#accepting all data from client.py side but accepting only binary data from simulink side
+import socket
+
+# Define the TCP IP address and port number
+TCP_IP = '127.0.0.1'
+TCP_PORT = 30002
+
+# Create a TCP/IP socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Bind the socket to the address and port
+server_socket.bind((TCP_IP, TCP_PORT))
+
+# Listen for incoming connections
+server_socket.listen(1)
+
+print(f"Listening on {TCP_IP}:{TCP_PORT}")
+
+while True:
+    # Accept a connection
+    conn, addr = server_socket.accept()
+    print('Connection address:', addr)
+    
+    try:
+        while True:
+            # Receive data from the client
+            data = conn.recv(1024)
+            if not data:
+                break
+            
+            # Attempt to decode the received data using UTF-8
+            try:
+                received_data = data.decode('utf-8').strip()
+            except UnicodeDecodeError:
+                # If decoding as UTF-8 fails, treat the data as binary
+                received_data = data
+            
+            # Check the data type and print accordingly
+            if isinstance(received_data, str):
+                try:
+                    integer_value = int(received_data)
+                    print("Received integer:", integer_value)
+                except ValueError:
+                    try:
+                        float_value = float(received_data)
+                        print("Received float:", float_value)
+                    except ValueError:
+                        print("Received string:", received_data)
+            else:
+                print("Received binary data:", received_data)
+    
+    finally:
+        # Close the connection
+        conn.close()

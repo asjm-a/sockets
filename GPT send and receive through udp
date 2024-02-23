@@ -1,0 +1,29 @@
+import socket
+
+def main():
+    server_address = ('localhost', 12345)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind(server_address)
+
+    print("Server is listening...")
+
+    # Create a new socket for sending data to another UDP port
+    sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    while True:
+        data, address = server_socket.recvfrom(1024)
+        if data:
+            # Assuming data contains a boolean value followed by a float value
+            bool_value, float_value = data.decode().split(",")
+            bool_value = bool(int(bool_value))
+            float_value = float(float_value)
+
+            # Process the data as needed
+            print("Received:", bool_value, float_value)
+
+            # Send the received data to another UDP port
+            sender_address = ('localhost', 54321)  # Change to your desired port
+            sender_socket.sendto(data, sender_address)
+
+if __name__ == "__main__":
+    main()

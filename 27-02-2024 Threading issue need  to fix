@@ -1,0 +1,120 @@
+import socket
+import threading
+import struct
+
+class lnkserve:
+    host = '127.0.0.1'
+    tcp_ports = [30000, 30001, 30002]  # Port for TCP clients
+    udp_ports = [12345,12346, 12347,12348,12349]   # Port for UDP clients
+    sockets =[]
+    sockets_udp =[]
+    float_value = 0.0
+    bool_value = False
+    udp_addr = None
+
+
+    @staticmethod
+    def handle_tcp(client):
+        try:
+            float_value_received = False
+
+            while True:
+                # Receive float data
+                float_data = client.recv(8)
+                if not float_data:
+                    break
+                lnkserve.float_value = struct.unpack('!d', float_data)[0]
+                print("Received float via TCP:", lnkserve.float_value)
+                float_value_received = True
+
+                # Receive boolean data if float statement not activated
+                if not float_value_received:
+                    bool_data = client.recv(1)
+                    if not bool_data:
+                        break
+                    lnkserve.bool_value = struct.unpack('!?', bool_data)[0]
+                    print("Received boolean via TCP:", lnkserve.bool_value)
+
+        except ConnectionResetError as c:
+            print("TCP Client has left", c)
+        except Exception as e:
+            print("TCP Error:", e)
+        finally:
+            client.close()
+
+    @staticmethod
+    def handle_udp_cl():
+        try:
+            while True:
+                for s in lnkserve.sockets_udp:
+                    data, address = s.recvfrom(1024)
+
+                    
+                    lnkserve.udp_addr= address
+                    
+
+                    if data:
+                    # Assuming data contains a boolean value followed by a float value
+                        bool_value, float_value = data.decode().split(",")
+                        bool_value = bool(int(bool_value))
+                        float_value = float(float_value)
+
+                    # Process the data as needed
+                        print(f"Received via UDP from {address}: {bool_value}, {float_value}")
+
+        except Exception as e:
+            print("UDP Error:", e)
+
+    def sendtoudpcl():
+        for s in lnkserve.sockets_udp:
+            float_bytes = struct.pack('d', lnkserve.float_value)
+            bool_bytes = struct.pack('?', lnkserve.bool_value)
+            s.sendto(float_bytes, lnkserve.udp_addr)
+            s.sendto(bool_bytes, lnkserve.udp_addr)
+
+
+    @staticmethod
+    def start_server(host, port):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((host, port))
+        s.listen(5)
+        lnkserve.sockets.append(s)
+        print(f"TCP Server listening on {host}:{port}")
+        while True:
+            client, client_address = s.accept()
+            print(f"Connection from {client_address}")
+            client_thread = threading.Thread(target=lnkserve.handle_tcp, args=(client,))
+            client_thread.start()
+
+
+
+    @staticmethod
+    def start_server_udp(host, port):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind((host, port))
+        lnkserve.sockets_udp.append(s)
+        print(f"UDP Server listening on {host}:{port}")
+        while True:
+            client_thread = threading.Thread(target=lnkserve.handle_udp_cl,args=())
+            client_thread.start()
+            while lnkserve.udp_addr!= None :
+                client_thread = threading.Thread(target=lnkserve.sendtoudpcl, args=())
+                client_thread.start()
+    
+        
+
+    @staticmethod
+    def start_servers():
+        for port in lnkserve.tcp_ports:
+            server_thread = threading.Thread(target=lnkserve.start_server, args=(lnkserve.host, port))
+            server_thread.start()
+        for port in lnkserve.udp_ports:
+            server_thread = threading.Thread(target=lnkserve.start_server_udp,args=(lnkserve.host,port))
+            server_thread.start()
+    
+        
+        
+        
+
+if __name__ == "__main__":
+    lnkserve.start_servers()

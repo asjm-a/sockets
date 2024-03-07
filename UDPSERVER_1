@@ -1,0 +1,59 @@
+import socket
+import threading
+
+
+
+class UDPServer:
+    def __init__(self, host='127.0.0.1', port=30000):
+        self.host = host
+        self.port = port
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind((self.host, self.port))
+        print(f"Server listening on {self.host}:{self.port}")
+
+    def start(self):
+        while True:
+            data, addr = self.socket.recvfrom(1024)
+            if data:
+                print(f"Received from {addr}: {data.decode()}")
+                self.send_to_client(data, addr)
+
+    def send_to_client(self, data, addr):
+        message = input("Enter message to send: ")
+        self.socket.sendto(message.encode(), addr)
+
+class UDPClient:
+    def __init__(self, server_host='127.0.0.1', server_port=30000):
+        self.server_host = server_host
+        self.server_port = server_port
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        
+
+    def start(self):
+        while True:
+            message = input("Enter message to send: ")
+            self.socket.sendto(message.encode(), (self.server_host, self.server_port))
+            data, addr = self.socket.recvfrom(1024)
+            if data:
+                print(f"Received from {addr}: {data.decode()}")
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    server = UDPServer()
+    client = UDPClient()
+
+    server_thread = threading.Thread(target=server.start)
+    client_thread = threading.Thread(target=client.start)
+
+    server_thread.start()
+    client_thread.start()
+
+    server_thread.join()
+    client_thread.join()
